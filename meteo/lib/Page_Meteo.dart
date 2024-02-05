@@ -4,65 +4,75 @@ import 'service/service meteo.dart';
 import 'package:lottie/lottie.dart';
 import 'package:meteo/Bouton.dart';
 
-
 class PageMeteo extends StatefulWidget {
-  const PageMeteo({super.key});
+  const PageMeteo({Key? key}) : super(key: key);
+
   @override
   State<PageMeteo> createState() => _PageMeteoState();
 }
 
 class _PageMeteoState extends State<PageMeteo> {
+  final _ServiceMeteo = ServiceMeteo('c9488b55c11530376fbb215ccc69166c');
+  Meteo? _meteo;
+  String MaVille = '';
 
-//api key
-final _ServiceMeteo = ServiceMeteo('c9488b55c11530376fbb215ccc69166c');
-Meteo? _meteo;
+  // Recherche de la condition météo
+  Future<void> _rechercheMeteo() async {
+    String ville = await _ServiceMeteo.getVille();
 
-
-// recherche de la condition météo
-  _rechercheMeteo() async {
-  String Ville = await _ServiceMeteo.getVille();
-
-  // obtenir le temps de la ville
-  try {
-    final Meteo = await _ServiceMeteo.getMeteo(Ville);
-    setState(() {
-      _meteo = Meteo;
-    });
-  }
-  //les erreurs
-    catch (e){
+    try {
+      final meteo = await _ServiceMeteo.getMeteo(ville);
+      setState(() {
+        _meteo = meteo;
+      });
+    } catch (e) {
       print(e);
     }
   }
 
+  Future<void> _rechercheMeteoB(String? maVille) async {
+    if (maVille != null && maVille.isNotEmpty) {
+      try {
+        final meteo = await _ServiceMeteo.getMeteo(maVille);
+        setState(() {
+          _meteo = meteo;
+        });
+      } catch (e) {
+        print(e);
+      }
+    } else {
+      // Si maVille est null ou vide, effectuez la recherche par défaut
+      await _rechercheMeteo();
+    }
+  }
 
-// animation météos
+  // Animation météo
   String getLottieAnimationForWeather() {
-    if (_meteo == null || _meteo?.Maincondition == null) {
+    if (_meteo == null || _meteo!.Maincondition == null) {
       return 'animations/default.json'; // s'il ne trouve pas de conditions météo
     }
 
-    // Utilisez un bloc switch pour déterminer le nom du fichier Lottie en fonction de la condition météo
-    switch (_meteo?.Maincondition.toLowerCase()) {
+    switch (_meteo!.Maincondition.toLowerCase()) {
       case 'clear':
-        return 'animations/sunny.json'; //  dégagé
+        return 'animations/sunny.json'; // dégagé
       case 'clouds':
         return 'animations/cloudy.json'; // nuageux
       case 'rain':
-        return 'animations/rainy.json'; //  pluvieux
+        return 'animations/rainy.json'; // pluvieux
       case 'snow':
-        return 'animations/snowy.json'; //  neigeux
-    // Ajoutez d'autres cas selon les conditions météorologiques que vous prenez en charge
+        return 'animations/snowy.json'; // neigeux
       default:
         return 'animations/default.json'; // Animation par défaut
     }
   }
 
-    void initState() {
-  super.initState();
-  //demarrage de la requête
-  _rechercheMeteo();
-}
+  @override
+  void initState() {
+    super.initState();
+    // Démarrage de la requête avec la valeur par défaut
+    _rechercheMeteoB(MaVille);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -70,24 +80,60 @@ Meteo? _meteo;
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // écran de chargement
-            Text(_meteo?.Ville?? "chargement de la ville"),
+            Container(
+              padding: EdgeInsets.all(20.0),
+              child: TextField(
+                style: TextStyle(color: Colors.black),
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: Colors.white,
+                  hintText: "Quel temps fait-il ici ? (Ville)",
+                  hintStyle: TextStyle(
+                    color: Colors.grey,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.all(
+                      Radius.circular(10.0),
+                    ),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+                onChanged: (value) {
+                  setState(() {
+                    MaVille = value;
+                  });
+                },
+              ),
+            ),
+            Bouton(
+              text: "Rechercher",
+              onPressed: () {
+                _rechercheMeteoB(MaVille);
+              },
+            ),
+            Text(_meteo?.Ville ?? "chargement de la ville"),
             Text('${_meteo?.Temperature.round()}°C'),
-
-            //animation des images json
             Lottie.asset(
               getLottieAnimationForWeather(),
-              width: 200, // largeur  de l'animation
-              height: 200, // hauteur  de l'animation
-              repeat: true, // répéter l'animation
-              reverse: false, //inverser l'animation
+              width: 200,
+              height: 200,
+              repeat: true,
+              reverse: false,
+            ),
+            Bouton(
+              text: "Ma position",
+              onPressed: () {
+                _rechercheMeteoB("");
+              },
             ),
 
-      ]
+
+
+
+
+          ],
+        ),
       ),
-    ),
     );
+  }
 }
-}
-
-
